@@ -45,7 +45,7 @@ export class VivoFibraAPI {
         "addressreferencepoint":
           (secondStepData?.landmark ? secondStepData?.landmark :
             secondStepData?.floor ? secondStepData?.floor : ''),
-        "dueday": thirdStepData?.dueDay,
+        "dueday": fourthStepData?.dueDay,
         "installation_preferred_date_one": thirdStepData?.primaryDate,
         "installation_preferred_period_one": thirdStepData?.primaryPeriod.toUpperCase(),
         "installation_preferred_date_two": thirdStepData?.secondaryDate,
