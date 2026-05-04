@@ -36,6 +36,7 @@ type FirstStepData = {
   package: string,
   licenses: string,
   unitValue: string,
+  contactAuthorization: boolean,
 }
 
 type SecondStepData = {
