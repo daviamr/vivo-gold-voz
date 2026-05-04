@@ -1,10 +1,12 @@
 import HeroTop from '../components/hero/HeroTop'
 import NormalPlans from '../components/menu-plans/NormalPlans'
 import Benefits from '../components/benefits/Benefits'
+import { ClearCustomerStorageOnPfHome } from '@/components/clear-storage/ClearCustomerStorageOnPfHome'
 
 export default function Home() {
   return (
     <div>
+      <ClearCustomerStorageOnPfHome />
       <HeroTop />
 
       <div className='container m-auto px-4'>

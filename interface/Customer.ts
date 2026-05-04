@@ -1,11 +1,15 @@
 import { ViaCepResponse } from "@/lib/ViaCEP"
+import { IPlan } from "./Plan"
 
 export interface Customer {
   address: Address,
-  plan: Plan,
+  plan: IPlan,
   firstStepData?: FirstStepData,
+  secondStepData?: SecondStepData,
   thirdStepData?: ThirdStepData,
-  fourthStepData?: FourthStepData
+  fourthStepData?: FourthStepData,
+  /** ID retornado pelo POST inicial em pedido-telefonia-movel (checkout PJ). */
+  orderId?: number,
 }
 
 type Address = ViaCepResponse & {
@@ -22,18 +26,8 @@ type Address = ViaCepResponse & {
   typeInstalation?: string,
   cnpj?: string,
   landmark?: string,
-  floor?: string
-}
-
-type Plan = {
-  plan: string,
-  fibra: string,
-  pos: string,
-  price: number,
-  apps: boolean,
-  tv: boolean,
-  tel: boolean,
-  typePerson?: string
+  floor?: string,
+  complement?: string,
 }
 
 type FirstStepData = {
@@ -42,32 +36,36 @@ type FirstStepData = {
   package: string,
   licenses: string,
   unitValue: string,
+}
+
+type SecondStepData = {
   fullName: string,
   tel: string,
   email: string,
   cnpj?: string,
-  mobileLine?: string,
-  mobileLineNumber?: string
   cpf?: string,
-  companyName?: string
-  legalAuthorization?: boolean
-  contactAuthorization?: boolean
+  companyName?: string,
+  legalAuthorization?: boolean,
+  contactAuthorization?: boolean,
+  ddi?: string,
 }
 
 type ThirdStepData = {
   ura?: boolean,
   termsAndContracts?: boolean,
-  primaryDate: string,
-  primaryPeriod: string,
+  primaryDate?: string,
+  primaryPeriod?: string,
   secondaryDate?: string,
   secondaryPeriod?: string
 }
 
 type FourthStepData = {
   dueDay: string,
-  bornDate: string,
-  cpf: string,
-  motherName: string,
+  /** Legado PF; checkout PJ não coleta esta etapa aqui. */
+  bornDate?: string,
+  /** CPF do gestor quando capturado na etapa 4 legada; PJ costuma usar `firstStepData.cpf`. */
+  cpf?: string,
+  motherName?: string,
   primaryTel?: string,
   secondaryTel?: string,
   termsOfUse?: boolean,

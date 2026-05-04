@@ -1,4 +1,7 @@
 import { UseFormClearErrors, UseFormSetError } from "react-hook-form"
+import { VivoFibraAPI } from "../VivoFibraAPI"
+
+const vivoFibraAPI = new VivoFibraAPI()
 
 export const validateStep1 = (
   data: CheckoutFormData,
@@ -35,12 +38,24 @@ export const validateStep1 = (
   return !hasError
 }
 
-export const validateStep2 = (
+export const validateStep2 = async (
   data: CheckoutFormData,
   setError: UseFormSetError<CheckoutFormData>,
   clearErrors: UseFormClearErrors<CheckoutFormData>,
-): boolean => {
+): Promise<boolean> => {
   let hasError = false
+
+  const availableTel = async (ddi: string, tel: string) => {
+    return await vivoFibraAPI.verifyTel(ddi, tel)
+  }
+  const availableEmail = async (email: string) => {
+    return await vivoFibraAPI.verifyEmail(email)
+  }
+
+  if (await availableEmail(data.email!) !== 'VALIDO') {
+    setError('email', { message: 'Endereço de e-mail inexistente.' })
+    hasError = true
+  }
 
   if (!data.fullName?.trim() || data.fullName.trim().length < 2) {
     setError('fullName', { message: 'Informe seu nome completo.' })
@@ -58,19 +73,23 @@ export const validateStep2 = (
   if (!data.tel?.trim() || data.tel.trim().length < 4) {
     setError('tel', { message: 'Informe número de celular válido.' })
     hasError = true
-  } else if (!/^\(\d{2}\)\s\d\s\d{4}-\d{4}$/.test(data.tel)) {
-    setError('tel', { message: 'Celular inválido. Use o formato 00 0 0000-0000' })
+  } else if (
+    !/^\(\d{2}\) \d \d{4}-\d{4}$/.test(data.tel) && // Brasil
+    !/^\(\d{3}\) \d{3}-\d{4}$/.test(data.tel) &&    // EUA/Canadá
+    !/^\d{2} \d{4} \d{4}$/.test(data.tel) &&         // Reino Unido
+    !/^\d{3} \d{3} \d{3}$/.test(data.tel)            // Portugal 
+  ) {
+    setError('tel', { message: 'Número de telefone inválido.' })
     hasError = true
-  } else { clearErrors('tel') }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!data.email?.trim()) {
-    setError('email', { message: 'Informe um e-mail válido.' })
-    hasError = true
-  } else if (!emailRegex.test(data.email)) {
-    setError('email', { message: 'Informe um e-mail válido.' })
-    hasError = true
-  } else { clearErrors('email') }
+  } else {
+    const telValido = await availableTel(data.ddi!, data.tel)
+    if (!telValido) {
+      setError('tel', { message: 'Celular inválido, digite novamente.' })
+      hasError = true
+    } else {
+      clearErrors('tel')
+    }
+  }
 
   if (!data.cpf?.trim() || data.cpf.replace(/\D/g, '').length !== 11) {
     setError('cpf', { message: 'Informe um CPF válido (000.000.000-00).' })
@@ -214,6 +233,7 @@ export type CheckoutFormData = {
   fullName?: string,
   tel?: string,
   email?: string,
+  ddi?: string,
   //pj
   cnpj?: string,
   companyName?: string,

@@ -16,10 +16,12 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import FirstStep from '../../components/checkout-steps/FirstStep'
 import ThirdStep from '../../components/checkout-steps/ThirdStep'
 import FourthStep from '../../components/checkout-steps/FourthStep'
-import { validateStep1, validateStep2 as validateStep2Profile, validateStep3, validateStep4 } from "@/lib/helpers/CheckoutValidations"
+import { validateStep1, validateStep2, validateStep3, validateStep4 } from "@/lib/helpers/CheckoutValidations"
 import { setStepQuery } from "@/lib/helpers/push"
 import { useRouter, useSearchParams } from "next/navigation"
 import { VivoFibraAPI } from "@/lib/VivoFibraAPI"
+import type { IPlan } from "@/interface/Plan"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 
 export const checkoutPFPJSchema = z.object({
   //step 1
@@ -36,6 +38,7 @@ export const checkoutPFPJSchema = z.object({
   companyName: z.string().optional(),
   legalAuthorization: z.boolean().optional(),
   contactAuthorization: z.boolean().optional(),
+  ddi: z.string().optional(),
   // step 2
   cep: z.string().optional(),
   homeNumber: z.string().optional(),
@@ -71,6 +74,7 @@ function Index() {
   const [step, setStep] = useState<number>(1)
   const [customerData, setCustomerData] = useState<Customer | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const STEPS = {
     1: {
       title: 'Olá! vamos iniciar sua compra online :)',
@@ -100,13 +104,14 @@ function Index() {
       licenses: customerData?.firstStepData?.licenses || '1',
       unitValue: customerData?.firstStepData?.unitValue || '',
       //
-      fullName: customerData?.firstStepData?.fullName || '',
-      tel: customerData?.firstStepData?.tel || '',
-      email: customerData?.firstStepData?.email || '',
-      cnpj: customerData?.firstStepData?.cnpj || '',
-      companyName: customerData?.firstStepData?.companyName || '',
-      legalAuthorization: customerData?.firstStepData?.legalAuthorization ?? false,
-      contactAuthorization: customerData?.firstStepData?.contactAuthorization ?? false,
+      fullName: customerData?.secondStepData?.fullName || '',
+      tel: customerData?.secondStepData?.tel || '',
+      email: customerData?.secondStepData?.email || '',
+      cnpj: customerData?.secondStepData?.cnpj || '',
+      companyName: customerData?.secondStepData?.companyName || '',
+      legalAuthorization: customerData?.secondStepData?.legalAuthorization ?? false,
+      contactAuthorization: customerData?.secondStepData?.contactAuthorization ?? false,
+      ddi: customerData?.secondStepData?.ddi || '+55',
       //
       cep: customerData?.address?.cep || '',
       homeNumber: customerData?.address?.homeNumber || '',
@@ -131,6 +136,12 @@ function Index() {
     },
   })
   const { formState: { errors }, setValue, control, register } = form
+  const DDI_OPTIONS = [
+    { label: '🇧🇷 +55', value: '+55', mask: '(99) 9 9999-9999' },  // ← sem +55
+    { label: '🇺🇸 +1', value: '+1', mask: '(999) 999-9999' },    // ← sem +1
+    { label: '🇬🇧 +44', value: '+44', mask: '99 9999 9999' },       // ← sem +44
+    { label: '🇵🇹 +351', value: '+351', mask: '999 999 999' },        // ← sem +351
+  ];
 
   useEffect(() => {
     const customer = localStorage.getItem('customer')
@@ -166,19 +177,20 @@ function Index() {
       setValue('ddd', customerData?.firstStepData?.ddd || '')
       setValue('package', customerData?.firstStepData?.package || '')
       setValue('licenses', customerData?.firstStepData?.licenses || '1')
-      setValue('unitValue', customerData?.firstStepData?.unitValue || 'R$ 50,00/mês')
+      setValue('unitValue', customerData?.firstStepData?.unitValue || '')
     }
 
     // Step 2
     if (step === 2) {
-      setValue('fullName', customerData?.firstStepData?.fullName || '')
-      setValue('tel', customerData?.firstStepData?.tel || '')
-      setValue('email', customerData?.firstStepData?.email || '')
-      setValue('cnpj', customerData?.firstStepData?.cnpj || '')
-      setValue('companyName', customerData?.firstStepData?.companyName || '')
-      setValue('legalAuthorization', customerData?.firstStepData?.legalAuthorization ?? false)
-      setValue('contactAuthorization', customerData?.firstStepData?.contactAuthorization ?? false)
-      setValue('cpf', customerData?.firstStepData?.cpf || '')
+      setValue('fullName', customerData?.secondStepData?.fullName || '')
+      setValue('tel', customerData?.secondStepData?.tel || '')
+      setValue('email', customerData?.secondStepData?.email || '')
+      setValue('cnpj', customerData?.secondStepData?.cnpj || '')
+      setValue('companyName', customerData?.secondStepData?.companyName || '')
+      setValue('legalAuthorization', customerData?.secondStepData?.legalAuthorization ?? false)
+      setValue('contactAuthorization', customerData?.secondStepData?.contactAuthorization ?? false)
+      setValue('cpf', customerData?.secondStepData?.cpf || '')
+      setValue('ddi', customerData?.secondStepData?.ddi || '+55')
     }
 
     // Step 3
@@ -190,8 +202,9 @@ function Index() {
     // Step 4
     if (step === 4) {
       setValue('dueDay', customerData?.fourthStepData?.dueDay || '')
-      setValue('cpf', customerData?.fourthStepData?.cpf || '')
-      setValue('primaryTel', customerData?.firstStepData?.tel || '')
+      const gestorCpf = customerData?.secondStepData?.cpf || customerData?.fourthStepData?.cpf || ''
+      setValue('cpf', gestorCpf)
+      setValue('primaryTel', customerData?.fourthStepData?.primaryTel || customerData?.secondStepData?.tel || '')
       setValue('secondaryTel', customerData?.fourthStepData?.secondaryTel || '')
       setValue('termsOfUse', customerData?.fourthStepData?.termsOfUse || false)
       setValue('acceptOffers', customerData?.fourthStepData?.acceptOffers || false)
@@ -222,7 +235,7 @@ function Index() {
     }
 
     if (step === 2) {
-      const firstStepData = {
+      const secondStepData = {
         fullName: data.fullName,
         tel: data.tel,
         email: data.email,
@@ -232,13 +245,13 @@ function Index() {
         contactAuthorization: data.contactAuthorization,
         cpf: data.cpf
       }
-      const isValid = validateStep2Profile(data, form.setError, form.clearErrors)
+      const isValid = await validateStep2(data, form.setError, form.clearErrors)
       if (!isValid) return
       dataToSave = {
         ...customerData,
-        firstStepData: {
-          ...customerData?.firstStepData,
-          ...firstStepData,
+        secondStepData: {
+          ...customerData?.secondStepData,
+          ...secondStepData,
         }
       } as Customer
     }
@@ -248,50 +261,113 @@ function Index() {
         ura: data.ura ?? true,
         termsAndContracts: data.termsAndContracts ?? false,
       }
-      dataToSave = { ...customerData, thirdStepData } as Customer
       const isValid = validateStep3(data, form.setError, form.clearErrors)
       if (!isValid) return
+      dataToSave = { ...customerData, thirdStepData } as Customer
     }
 
     if (step === 4) {
+      const gestorCpf = data.cpf?.trim()
+        ? data.cpf
+        : customerData?.secondStepData?.cpf ?? ''
       const fourthStepData = {
-        dueDay: data.dueDay,
-        cpf: data.cpf,
+        dueDay: data.dueDay ?? '',
+        cpf: gestorCpf,
         primaryTel: data.primaryTel,
         secondaryTel: data.secondaryTel,
         termsOfUse: data.termsOfUse,
         acceptOffers: data.acceptOffers,
         url: window.location.href
       }
-      dataToSave = { ...customerData, fourthStepData } as Customer
       const isValid = validateStep4(data, form.setError, form.clearErrors)
       if (!isValid) return
+      dataToSave = { ...customerData, fourthStepData } as Customer
     }
 
     if (!dataToSave) return
+
+    setIsSubmitting(true)
+    try {
+      if (step === 1) {
+        const step1Fields = {
+          modality: data.modality,
+          ddd: data.ddd,
+          package: data.package,
+          licenses: data.licenses,
+          unitValue: data.unitValue ?? dataToSave.firstStepData?.unitValue,
+        }
+        type CustomerWithLegacyOrderId = Customer & { orderId?: number }
+        let orderId = customerData?.orderId ?? (customerData as CustomerWithLegacyOrderId | null)?.orderId
+
+        if (!orderId) {
+          orderId = 2
+          // throw new Error(
+          //   "Pedido não encontrado. Volte à seleção do plano e tente novamente.",
+          // )
+        }
+
+        await vivoFibraAPI.updateOrderProgress(
+          orderId,
+          vivoFibraAPI.buildPjCheckoutStep1Partial(step1Fields),
+        )
+        dataToSave = { ...dataToSave, orderId }
+      } else if (step === 2) {
+        const id = customerData?.orderId
+        if (!id) throw new Error("Pedido não encontrado. Volte à etapa 1.")
+        await vivoFibraAPI.updateOrderProgress(
+          id,
+          vivoFibraAPI.buildPjCheckoutStep2Partial(dataToSave),
+        )
+      } else if (step === 3) {
+        const id = customerData?.orderId
+        if (!id) throw new Error("Pedido não encontrado. Volte à etapa 1.")
+        await vivoFibraAPI.updateOrderProgress(
+          id,
+          vivoFibraAPI.buildPjCheckoutStep3Partial(dataToSave.thirdStepData),
+        )
+      } else if (step === 4) {
+        const id = customerData?.orderId
+        if (!id) throw new Error("Pedido não encontrado. Volte à etapa 1.")
+        if (!dataToSave.fourthStepData) throw new Error("Dados da etapa 4 incompletos.")
+        const gestorCpfDigits = (
+          dataToSave.secondStepData?.cpf ??
+          dataToSave.fourthStepData.cpf ??
+          ""
+        ).replace(/\D/g, "")
+        const orderNumber = VivoFibraAPI.generateClientOrderNumber()
+        const response = await vivoFibraAPI.updateOrderProgress(
+          id,
+          vivoFibraAPI.buildPjCheckoutStep4Partial({
+            fourth: dataToSave.fourthStepData,
+            gestorCpfDigits,
+            orderNumber,
+          }),
+        )
+
+        localStorage.setItem("customer", JSON.stringify(dataToSave))
+        setCustomerData(dataToSave)
+
+        if (response.disponibilidade === false) {
+          router.push(`/unavailable`)
+          return
+        }
+        router.push(`/available`)
+        return
+      }
+    } catch (e) {
+      console.error("Checkout API:", e)
+      return
+    } finally {
+      setIsSubmitting(false)
+    }
+
     localStorage.setItem('customer', JSON.stringify(dataToSave))
     setCustomerData(dataToSave)
 
-    const nextStep = (step + 1)
+    const nextStep = step + 1
     if (step < 4) {
       setStep(nextStep)
       setStepQuery(nextStep)
-    } else {
-      try {
-        if (!dataToSave)
-          return console.error('>>> dados do cliente não encontrados')
-
-        const response = await vivoFibraAPI.createOrder(dataToSave)
-
-        console.log(response.disponibilidade)
-
-        if (!response.disponibilidade)
-          return router.push(`/unavailable`)
-
-        return router.push(`/available`)
-      } catch (error: any) {
-        console.log(error)
-      }
     }
   }
 
@@ -404,24 +480,63 @@ function Index() {
                       <p className="text-red-500 text-sm mt-1">{errors.fullName.message}</p>)}
                   </div>
 
-                  <div className={'col-span-2'}>
+                  <div className="col-span-2">
                     <Label className="text-1xl font-normal mb-1">Celular</Label>
-                    <Controller
-                      name="tel"
-                      control={control}
-                      render={({ field }) => (
-                        <Input
-                          type="text"
-                          value={field.value}
-                          onChange={field.onChange}
-                          ref={withMask('(99) 9 9999-9999', {
-                            placeholder: '',
-                            showMaskOnHover: false,
-                            showMaskOnFocus: false
-                          })} />
-                      )} />
-                    {errors.tel && (
-                      <p className="text-red-500 text-sm mt-1">{errors.tel.message}</p>)}
+                    <div className="flex gap-2">
+
+                      {/* Controller do DDI */}
+                      <Controller
+                        name="ddi"
+                        control={control}
+                        render={({ field }) => {
+                          const currentMask = DDI_OPTIONS.find(d => d.value === field.value)?.mask ?? '(99) 9 9999-9999';
+
+                          return (
+                            <>
+                              <Select
+                                key={field.value}
+                                value={field.value}
+                                onValueChange={(val) => {
+                                  field.onChange(val);
+                                  setValue('tel', '');
+                                }}>
+                                <SelectTrigger className="w-[110px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {DDI_OPTIONS.map(opt => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              {/* Controller do Tel usando a máscara do DDI atual */}
+                              <Controller
+                                name="tel"
+                                control={control}
+                                render={({ field: telField }) => (
+                                  <Input
+                                    type="text"
+                                    value={telField.value ?? ''}
+                                    onChange={(e) => telField.onChange(e.target.value)}
+                                    onBlur={telField.onBlur}
+                                    ref={withMask(currentMask, {
+                                      placeholder: '',
+                                      showMaskOnHover: false,
+                                      showMaskOnFocus: false,
+                                    })}
+                                  />
+                                )}
+                              />
+                            </>
+                          );
+                        }}
+                      />
+
+                    </div>
+                    {errors.tel && <p className="text-red-500 text-sm mt-1">{errors.tel.message}</p>}
                   </div>
 
                   <Label htmlFor="legalAuthorization" className="flex items-center gap-2 font-normal text-sm lg:col-span-2">
@@ -479,8 +594,16 @@ function Index() {
             <Button
               variant={'vivo'}
               className="w-full py-7 rounded-sm text-1xl text-white mt-4"
-              type="submit">
-              Avançar
+              type="submit"
+              disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader className="inline animate-spin mr-2" size={20} />
+                  Enviando…
+                </>
+              ) : (
+                'Avançar'
+              )}
             </Button>
           </div>
         </form>
@@ -489,17 +612,17 @@ function Index() {
           <p className="text-2xl font-semibold text-gray-800 mb-4">Meu plano</p>
 
           <div className="flex items-center justify-between">
-            <p className="flex items-center gap-2 font-light"> <Wifi size={18} /> {customerData?.plan?.plan} {customerData?.plan?.fibra}</p>
+            <p className="flex items-center gap-2 font-light"> <Wifi size={18} /> {customerData?.plan?.name}</p>
 
             <p className="font-light">
-              {customerData?.plan?.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/mês</p>
+              {customerData?.plan?.pricing?.base_monthly.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/mês</p>
           </div>
 
           <div className="flex items-center justify-between mt-4">
             <p className="flex items-center gap-2 font-light">Total</p>
 
             <p className="font-light">
-              {customerData?.plan?.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/mês</p>
+              {customerData?.plan?.pricing?.base_monthly.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/mês</p>
           </div>
         </div>
 

@@ -1,13 +1,38 @@
 'use client'
 
+import { useEffect, useState } from "react";
 import { withMask } from "use-mask-input";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Checkbox } from "../ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Controller, UseFormReturn } from "react-hook-form";
 
+const DDI_OPTIONS = [
+  { label: "🇧🇷 +55", value: "+55", mask: "(99) 9 9999-9999" },
+  { label: "🇺🇸 +1", value: "+1", mask: "(999) 999-9999" },
+  { label: "🇬🇧 +44", value: "+44", mask: "99 9999 9999" },
+  { label: "🇵🇹 +351", value: "+351", mask: "999 999 999" },
+] as const;
+
 function Index({ form }: SecondStepProps) {
-  const { formState: { errors }, control, setValue, watch } = form
+  const { formState: { errors }, control, setValue, getValues } = form
+
+  const [primaryDdi, setPrimaryDdi] = useState("+55")
+  const [secondaryDdi, setSecondaryDdi] = useState("+55")
+
+  useEffect(() => {
+    const step2Ddi = getValues("ddi")
+    if (step2Ddi && typeof step2Ddi === "string") {
+      setPrimaryDdi(step2Ddi)
+    }
+  }, [getValues])
 
   return (
     <div className="mt-8">
@@ -21,21 +46,50 @@ function Index({ form }: SecondStepProps) {
 
         <div className="lg:col-span-2">
           <Label className="text-1xl font-normal mb-1" htmlFor="primaryTel">Telefone Principal</Label>
-          <Controller
-            name="primaryTel"
-            control={control}
-            render={({ field }) => (
-              <Input
-                id="primaryTel"
-                type="text"
-                value={field.value || ''}
-                onChange={field.onChange}
-                ref={withMask('(99) 9 9999-9999', {
-                  placeholder: '',
-                  showMaskOnHover: false,
-                  showMaskOnFocus: false
-                })} />
-            )} />
+          <div className="flex gap-2">
+            <Select
+              key={primaryDdi}
+              value={primaryDdi}
+              onValueChange={(val) => {
+                setPrimaryDdi(val)
+                setValue("primaryTel", "")
+              }}>
+              <SelectTrigger className="w-[110px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DDI_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Controller
+              key={`primaryTel-${primaryDdi}`}
+              name="primaryTel"
+              control={control}
+              render={({ field }) => {
+                const currentMask =
+                  DDI_OPTIONS.find((d) => d.value === primaryDdi)?.mask ?? "(99) 9 9999-9999"
+                return (
+                  <Input
+                    id="primaryTel"
+                    type="text"
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    onBlur={field.onBlur}
+                    ref={withMask(currentMask, {
+                      placeholder: "",
+                      showMaskOnHover: false,
+                      showMaskOnFocus: false,
+                    })}
+                  />
+                )
+              }}
+            />
+          </div>
           {errors.primaryTel && (
             <p className="text-red-500 text-sm mt-1">{String(errors.primaryTel.message)}</p>)}
         </div>
@@ -43,21 +97,50 @@ function Index({ form }: SecondStepProps) {
 
         <div className="lg:col-span-2">
           <Label className="text-1xl font-normal mb-1" htmlFor="secondaryTel">Segundo número de contato (opcional)</Label>
-          <Controller
-            name="secondaryTel"
-            control={control}
-            render={({ field }) => (
-              <Input
-                id="secondaryTel"
-                type="text"
-                value={field.value || ''}
-                onChange={field.onChange}
-                ref={withMask('(99) 9 9999-9999', {
-                  placeholder: '',
-                  showMaskOnHover: false,
-                  showMaskOnFocus: false
-                })} />
-            )} />
+          <div className="flex gap-2">
+            <Select
+              key={secondaryDdi}
+              value={secondaryDdi}
+              onValueChange={(val) => {
+                setSecondaryDdi(val)
+                setValue("secondaryTel", "")
+              }}>
+              <SelectTrigger className="w-[110px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DDI_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Controller
+              key={`secondaryTel-${secondaryDdi}`}
+              name="secondaryTel"
+              control={control}
+              render={({ field }) => {
+                const currentMask =
+                  DDI_OPTIONS.find((d) => d.value === secondaryDdi)?.mask ?? "(99) 9 9999-9999"
+                return (
+                  <Input
+                    id="secondaryTel"
+                    type="text"
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    onBlur={field.onBlur}
+                    ref={withMask(currentMask, {
+                      placeholder: "",
+                      showMaskOnHover: false,
+                      showMaskOnFocus: false,
+                    })}
+                  />
+                )
+              }}
+            />
+          </div>
           {errors.secondaryTel && (
             <p className="text-red-500 text-sm mt-1">{String(errors.secondaryTel.message)}</p>)}
         </div>

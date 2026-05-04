@@ -24,7 +24,7 @@ function Index() {
     const storedCustomer = localStorage.getItem('customer')
     if (storedCustomer) {
       try {
-        const parsedCustomer = JSON.parse(storedCustomer)
+        const parsedCustomer = JSON.parse(storedCustomer) as Customer
         setCustomer(parsedCustomer)
       } catch (error) {
         console.error('Erro ao fazer parse do customer:', error)
@@ -71,26 +71,21 @@ function Index() {
               <p className="text-2xl font-bold mb-2">Resumo do pedido: 1234</p>
               <div className="border rounded-sm py-4 text-left lg:min-h-[227px]">
                 <div className="px-4 pb-4">
-                  <p>{customer?.plan.plan} {customer?.plan?.fibra}</p>
-                  <p>Vivo Pós {customer?.plan?.pos} GB</p>
-                  {customer?.plan?.tv && (
-                    <p> {customer?.plan?.tv} Plano TV Tal</p>
+                  <p>{customer?.plan.name}</p>
+                  <p>Vivo Pós</p>
+                  {customer?.plan?.extras && (
+                    <p> {customer?.plan?.extras.find(e => e.id === 'tv')?.title}</p>
                   )}
                   <p>6 meses de Amazon Prime cortesia</p>
                   <p>6 meses de HBO Max Básico Ads cortesia</p>
                 </div>
-                <p className="flex justify-between items-center border-t font-bold px-4 pt-4">Total: <span className="text-2xl">{formatToBRL(customer?.plan?.price || 0)}/mês</span></p>
+                <p className="flex justify-between items-center border-t font-bold px-4 pt-4">Total: <span className="text-2xl">{formatToBRL(customer?.plan?.pricing?.base_monthly || 0)}/mês</span></p>
               </div>
             </div>
 
             <div className="text-left mb-4">
               <p className="text-2xl font-bold mb-2">Instalação:</p>
               <div className="border rounded-sm py-4 text-left">
-                <div className="px-4 pb-4">
-                  <p className="font-bold mb-2">Endereço da instalação:</p>
-                  <p>{customer?.address.street}, {customer?.address.homeNumber}, {customer?.address.bairro} - {customer?.address.city}, {customer?.address.cep}</p>
-                </div>
-
                 <div className="border-t px-4 pt-4">
 
                   <p className="font-bold mb-2">Pré-agendamento da instalação:</p>
@@ -110,8 +105,8 @@ function Index() {
 
           <div className="border rounded-sm p-4 text-left mb-4">
             <p className="mb-2 font-bold">Informações do comprador:</p>
-            <p>Nome: <strong>{customer?.firstStepData?.fullName}</strong></p>
-            <p>E-mail: <strong>{customer?.firstStepData?.email}</strong></p>
+            <p>Nome: <strong>{customer?.secondStepData?.fullName}</strong></p>
+            <p>E-mail: <strong>{customer?.secondStepData?.email}</strong></p>
           </div>
 
           <div className="border rounded-sm p-4 text-left">
