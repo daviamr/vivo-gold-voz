@@ -1,6 +1,7 @@
 import { Customer } from "@/interface/Customer";
 import type { CreateOrderResponse } from "@/interface/Order";
 import { IPlan } from "@/interface/Plan";
+import { URA_ADDITIONAL } from "./checkout/pabxPlanBands"
 import { api } from "./api"
 
 const TELEFONIA_ORDER_PATH = "pedido-telefonia-fixa"
@@ -8,11 +9,14 @@ const PJ_LANDING_PAGE = "vivo_voz"
 
 export type PJCheckoutStep1Fields = {
   category?: string
+  /** `new_line` | `port_in_to_vivo` — enviado como `line_action`. */
   modality?: string
   ddd?: string
+  /** Rótulo da faixa (plan_name). */
   package?: string
   licenses?: string
   unitValue?: string
+  fixedLineNumber?: string
 }
 
 type PlanExtra = {
@@ -60,18 +64,30 @@ export class VivoFibraAPI {
   }
 
   buildPjCheckoutStep1Partial(step1: PJCheckoutStep1Fields): { pedido: Record<string, unknown> } {
-    return {
-      pedido: {
-        pedido: 1,
-        // modalidade: step1.modality ?? "",
-        // ddd: step1.ddd ?? "",
-        // pacote: step1.package ?? "",
-        plan: {
-          licenses_quantity: step1.licenses ?? "",
-        }
-        // valor_unitario: step1.unitValue ?? "",
-      },
+    const lineAction = step1.modality?.trim()
+    const isPort = lineAction === "port_in_to_vivo"
+    const licensesQty = parseInt(step1.licenses ?? "1", 10)
+    const licenses_quantity = Number.isFinite(licensesQty) ? licensesQty : 1
+
+    const base: Record<string, unknown> = {
+      pedido: 1,
+      line_action: lineAction ?? "",
     }
+
+    if (isPort) {
+      base.hasFixedLinePortability = 1
+      base.fixedLineNumberToPort = (step1.fixedLineNumber ?? "").trim()
+      base.plan = {
+        licenses_quantity: 1,
+      }
+    } else {
+      base.plan = {
+        plan_name: (step1.package ?? "").trim(),
+        licenses_quantity,
+      }
+    }
+
+    return { pedido: base }
   }
 
   async updateOrderProgress(
@@ -206,10 +222,22 @@ export class VivoFibraAPI {
   buildPjCheckoutStep3Partial(third?: Customer["thirdStepData"]): {
     pedido: Record<string, unknown>
   } {
+    const selectedAdditionals =
+      third?.ura === true
+        ? [
+          {
+            price: URA_ADDITIONAL.price,
+            value: URA_ADDITIONAL.value,
+            extra_id: URA_ADDITIONAL.extra_id,
+          },
+        ]
+        : []
     return {
       pedido: {
         pedido: 3,
-        wants_ura: third?.ura ? 1 : 0,
+        plan: {
+          selected_additionals: selectedAdditionals,
+        },
         terms_contracts_accepted: third?.termsAndContracts ? 1 : 0,
       },
     }

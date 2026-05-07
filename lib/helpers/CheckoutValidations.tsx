@@ -1,5 +1,6 @@
 import { UseFormClearErrors, UseFormSetError } from "react-hook-form"
 import { VivoFibraAPI } from "../VivoFibraAPI"
+import { PABX_LINE_ACTION } from "@/lib/checkout/pabxPlanBands"
 
 const vivoFibraAPI = new VivoFibraAPI()
 
@@ -10,30 +11,64 @@ export const validateStep1 = (
 ): boolean => {
   let hasError = false
 
-  if (!data.modality?.trim()) {
-    setError('modality', { message: 'Informe a modalidade.' })
-    hasError = true
-  } else { clearErrors('modality') }
+  const modality = data.modality?.trim()
+  const isNewLine = modality === PABX_LINE_ACTION.NEW_LINE
+  const isPortability = modality === PABX_LINE_ACTION.PORT
 
-  if (!data.ddd?.trim()) {
-    setError('ddd', { message: 'Informe o DDD.' })
+  if (!modality || (!isNewLine && !isPortability)) {
+    setError('modality', { message: 'Selecione a modalidade.' })
     hasError = true
-  } else { clearErrors('ddd') }
+  } else {
+    clearErrors('modality')
+  }
 
-  if (!data.package?.trim()) {
-    setError('package', { message: 'Informe o pacote.' })
-    hasError = true
-  } else { clearErrors('package') }
+  if (isNewLine) {
+    const ddd = (data.ddd ?? '').replace(/\D/g, '')
+    if (ddd.length !== 2) {
+      setError('ddd', { message: 'Informe o DDD com 2 dígitos.' })
+      hasError = true
+    } else {
+      clearErrors('ddd')
+    }
 
-  if (!data.licenses?.trim()) {
-    setError('licenses', { message: 'Informe a quantidade de licenças.' })
-    hasError = true
-  } else { clearErrors('licenses') }
+    const packageOk = !!(data.package?.trim())
+    if (!packageOk) {
+      setError('package', { message: 'Selecione o pacote.' })
+      hasError = true
+    } else {
+      clearErrors('package')
+    }
 
-  if (!data.unitValue?.trim()) {
-    setError('unitValue', { message: 'Informe o valor unitário.' })
-    hasError = true
-  } else { clearErrors('unitValue') }
+    if (!data.licenses?.trim() || parseInt(data.licenses, 10) < 1) {
+      setError('licenses', { message: 'Informe a quantidade de licenças.' })
+      hasError = true
+    } else {
+      clearErrors('licenses')
+    }
+
+    if (!data.unitValue?.trim()) {
+      setError('unitValue', { message: 'Valor unitário ausente.' })
+      hasError = true
+    } else {
+      clearErrors('unitValue')
+    }
+
+    clearErrors('fixedLineNumber')
+  } else if (isPortability) {
+    clearErrors('ddd')
+    clearErrors('package')
+    clearErrors('licenses')
+    clearErrors('unitValue')
+
+    const fixed = data.fixedLineNumber?.trim()
+    const fixedDigits = fixed?.replace(/\D/g, '') ?? ''
+    if (!fixed || fixedDigits.length < 8) {
+      setError('fixedLineNumber', { message: 'Informe o número completo conforme o DDI selecionado.' })
+      hasError = true
+    } else {
+      clearErrors('fixedLineNumber')
+    }
+  }
 
   return !hasError
 }
@@ -225,6 +260,7 @@ export const validateStep4 = (
 
 export type CheckoutFormData = {
   modality?: string,
+  fixedLineNumber?: string,
   ddd?: string,
   package?: string,
   licenses?: string,

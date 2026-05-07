@@ -20,12 +20,17 @@ import { validateStep1, validateStep2, validateStep3, validateStep4 } from "@/li
 import { setStepQuery } from "@/lib/helpers/push"
 import { useRouter, useSearchParams } from "next/navigation"
 import { VivoFibraAPI } from "@/lib/VivoFibraAPI"
-import type { IPlan } from "@/interface/Plan"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import {
+  normalizeStoredLineModality,
+  planNameForLicenseCount,
+  PABX_LINE_ACTION,
+} from "@/lib/checkout/pabxPlanBands"
 
 export const checkoutPFPJSchema = z.object({
   //step 1
   modality: z.string().optional(),
+  fixedLineNumber: z.string().optional(),
   ddd: z.string().optional(),
   package: z.string().optional(),
   licenses: z.string().optional(),
@@ -98,11 +103,16 @@ function Index() {
     mode: 'onSubmit',
     resolver: zodResolver(checkoutPFPJSchema),
     defaultValues: {
-      modality: customerData?.firstStepData?.modality || '',
-      ddd: customerData?.firstStepData?.ddd || '',
-      package: customerData?.firstStepData?.package || '',
+      modality: normalizeStoredLineModality(customerData?.firstStepData?.modality) || '',
+      fixedLineNumber: customerData?.firstStepData?.fixedLineNumber || '',
+      ddd: (customerData?.firstStepData?.ddd || '').replace(/\D/g, '').slice(0, 2),
+      package:
+        customerData?.firstStepData?.package?.trim() ||
+        planNameForLicenseCount(
+          parseInt(customerData?.firstStepData?.licenses || '1', 10) || 1,
+        ),
       licenses: customerData?.firstStepData?.licenses || '1',
-      unitValue: customerData?.firstStepData?.unitValue || '',
+      unitValue: customerData?.firstStepData?.unitValue || 'R$ 50,00/mês',
       //
       fullName: customerData?.secondStepData?.fullName || '',
       tel: customerData?.secondStepData?.tel || '',
@@ -110,7 +120,7 @@ function Index() {
       cnpj: customerData?.secondStepData?.cnpj || '',
       companyName: customerData?.secondStepData?.companyName || '',
       legalAuthorization: customerData?.secondStepData?.legalAuthorization ?? false,
-      contactAuthorization: customerData?.secondStepData?.contactAuthorization ?? false,
+      contactAuthorization: customerData?.firstStepData?.contactAuthorization ?? false,
       ddi: customerData?.secondStepData?.ddi || '+55',
       //
       cep: customerData?.address?.cep || '',
@@ -124,7 +134,7 @@ function Index() {
       block: customerData?.address?.block || '',
       lot: customerData?.address?.lot || '',
       //
-      ura: customerData?.thirdStepData?.ura ?? true,
+      ura: customerData?.thirdStepData?.ura ?? false,
       termsAndContracts: customerData?.thirdStepData?.termsAndContracts ?? false,
       //
       dueDay: customerData?.fourthStepData?.dueDay || '',
@@ -173,11 +183,16 @@ function Index() {
 
     // Step 1
     if (step === 1) {
-      setValue('modality', customerData?.firstStepData?.modality || '')
-      setValue('ddd', customerData?.firstStepData?.ddd || '')
-      setValue('package', customerData?.firstStepData?.package || '')
+      setValue('modality', normalizeStoredLineModality(customerData?.firstStepData?.modality) || '')
+      setValue('fixedLineNumber', customerData?.firstStepData?.fixedLineNumber || '')
+      setValue('ddd', (customerData?.firstStepData?.ddd || '').replace(/\D/g, '').slice(0, 2))
+      const lic = parseInt(customerData?.firstStepData?.licenses || '1', 10) || 1
+      setValue(
+        'package',
+        customerData?.firstStepData?.package?.trim() || planNameForLicenseCount(lic),
+      )
       setValue('licenses', customerData?.firstStepData?.licenses || '1')
-      setValue('unitValue', customerData?.firstStepData?.unitValue || '')
+      setValue('unitValue', customerData?.firstStepData?.unitValue || 'R$ 50,00/mês')
     }
 
     // Step 2
@@ -195,7 +210,7 @@ function Index() {
 
     // Step 3
     if (step === 3) {
-      setValue('ura', customerData?.thirdStepData?.ura ?? true)
+      setValue('ura', customerData?.thirdStepData?.ura ?? false)
       setValue('termsAndContracts', customerData?.thirdStepData?.termsAndContracts ?? false)
     }
 
@@ -219,8 +234,10 @@ function Index() {
         modality: data.modality,
         ddd: data.ddd,
         package: data.package,
-        licenses: data.licenses,
+        licenses: data.modality === PABX_LINE_ACTION.PORT ? '1' : data.licenses,
         unitValue: data.unitValue || 'R$ 50,00/mês',
+        fixedLineNumber: data.fixedLineNumber?.trim(),
+        contactAuthorization: data.contactAuthorization ?? customerData?.firstStepData?.contactAuthorization ?? false,
       }
 
       const isValid = validateStep1(data, form.setError, form.clearErrors)
@@ -258,7 +275,7 @@ function Index() {
 
     if (step === 3) {
       const thirdStepData = {
-        ura: data.ura ?? true,
+        ura: data.ura ?? false,
         termsAndContracts: data.termsAndContracts ?? false,
       }
       const isValid = validateStep3(data, form.setError, form.clearErrors)
@@ -293,8 +310,9 @@ function Index() {
           modality: data.modality,
           ddd: data.ddd,
           package: data.package,
-          licenses: data.licenses,
+          licenses: data.modality === PABX_LINE_ACTION.PORT ? '1' : data.licenses,
           unitValue: data.unitValue ?? dataToSave.firstStepData?.unitValue,
+          fixedLineNumber: data.fixedLineNumber,
         }
         type CustomerWithLegacyOrderId = Customer & { orderId?: number }
         let orderId = customerData?.orderId ?? (customerData as CustomerWithLegacyOrderId | null)?.orderId

@@ -76,8 +76,6 @@ function Index() {
                   {customer?.plan?.extras && (
                     <p> {customer?.plan?.extras.find(e => e.id === 'tv')?.title}</p>
                   )}
-                  <p>6 meses de Amazon Prime cortesia</p>
-                  <p>6 meses de HBO Max Básico Ads cortesia</p>
                 </div>
                 <p className="flex justify-between items-center border-t font-bold px-4 pt-4">Total: <span className="text-2xl">{formatToBRL(customer?.plan?.pricing?.base_monthly || 0)}/mês</span></p>
               </div>

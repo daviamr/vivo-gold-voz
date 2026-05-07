@@ -4,6 +4,7 @@ import { Label } from "../ui/label"
 import { Controller, UseFormReturn } from "react-hook-form"
 import { Checkbox } from "../ui/checkbox"
 import { Button } from "../ui/button"
+import { URA_ADDITIONAL } from "@/lib/checkout/pabxPlanBands"
 
 function Index({ form }: ThirdStepProps) {
   const { formState: { errors }, control, setValue } = form
@@ -20,6 +21,10 @@ function Index({ form }: ThirdStepProps) {
   const minutes = Math.floor(secondsLeft / 60)
   const seconds = secondsLeft % 60
   const formattedTimer = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+  const uraPriceLabel = URA_ADDITIONAL.price.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  })
 
   return (
     <div>
@@ -65,18 +70,20 @@ function Index({ form }: ThirdStepProps) {
               />
             )}
           />
-          <span className="font-bold text-gray-500 text-2xl">URA</span>
+          <span className="font-bold text-gray-500 text-2xl">URA (adicional)</span>
         </Label>
         <div className="text-center">
-          <p className="font-semibold text-[20px] my-2 text-default-orange">Valor R$ 50,00/URA</p>
+          <p className="font-semibold text-[20px] my-2 text-default-orange">Valor {uraPriceLabel}/URA</p>
           <p className="text-gray-500 text-sm font-semibold w-80 m-auto">Experiência mais ágil, organizada e eficiente para seus clientes, sem depender de infraestrutura física.</p>
 
           <p className="py-3 border-2 max-w-60 m-auto rounded-sm my-4">
-            1
+            {URA_ADDITIONAL.value}
           </p>
 
           <Button
-            className="w-full max-w-70 bg-gray-500 rounded-full">
+            type="button"
+            className="w-full max-w-70 bg-gray-500 rounded-full"
+            onClick={() => setValue("ura", false)}>
             Remover
           </Button>
         </div>
@@ -106,15 +113,16 @@ function Index({ form }: ThirdStepProps) {
 
       <div className="flex items-center justify-center gap-8 mt-6 mb-8">
         <button
-          type="submit"
+          type="button"
           onClick={() => setValue('ura', false)}
           className="cursor-pointer font-semibold text-gray-500">
           Não tenho interesse
         </button>
         <Button
-          type="submit"
+          type="button"
+          onClick={() => setValue('ura', true)}
           className="rounded-full bg-green-600 hover:bg-green-600/80 cursor-pointer p-6 text-lg">
-          Finalizar pedido R$ 50,00/mês
+          Incluir URA {uraPriceLabel}/mês
         </Button>
       </div>
     </div>

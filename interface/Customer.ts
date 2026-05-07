@@ -31,12 +31,15 @@ type Address = ViaCepResponse & {
 }
 
 type FirstStepData = {
+  /** Valores da API: `new_line` | `port_in_to_vivo`. */
   modality: string,
   ddd: string,
   package: string,
   licenses: string,
   unitValue: string,
   contactAuthorization: boolean,
+  /** Número fixo para portabilidade (exibição/formato brasileiro). */
+  fixedLineNumber?: string,
 }
 
 type SecondStepData = {
@@ -52,6 +55,7 @@ type SecondStepData = {
 }
 
 type ThirdStepData = {
+  /** URA como adicional; controla `plan.selected_additionals`. */
   ura?: boolean,
   termsAndContracts?: boolean,
   primaryDate?: string,
